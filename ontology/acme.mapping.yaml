@@ -1,0 +1,188 @@
+version: 1
+warehouse: acme_sqlite
+
+source:
+  ddl: database/acme/ACME_small.ddl
+  reference_tables: [Party_Role]
+
+concepts:
+  Party:
+    table: Party
+    key_columns: [Party_Identifier]
+    columns: {id: Party_Identifier, party_name: Party_Name}
+
+  Policy:
+    table: Policy
+    key_columns: [Policy_Identifier]
+    columns:
+      id: Policy_Identifier
+      policy_number: Policy_Number
+      effective_date: Effective_Date
+      expiration_date: Expiration_Date
+
+  Claim:
+    table: Claim
+    key_columns: [Claim_Identifier]
+    columns:
+      id: Claim_Identifier
+      company_claim_number: Company_Claim_Number
+      claim_open_date: Claim_Open_Date
+      claim_close_date: Claim_Close_Date
+
+  Catastrophe:
+    table: Catastrophe
+    key_columns: [Catastrophe_Identifier]
+    columns: {id: Catastrophe_Identifier, catastrophe_name: Catastrophe_Name}
+
+  PolicyCoverageDetail:
+    table: Policy_Coverage_Detail
+    key_columns: [Effective_Date, Policy_Coverage_Detail_Identifier]
+    columns:
+      id: Policy_Coverage_Detail_Identifier
+      effective_date: Effective_Date
+      expiration_date: Expiration_Date
+
+  PolicyAmount:
+    table: Policy_Amount
+    key_columns: [Policy_Amount_Identifier]
+    columns: {id: Policy_Amount_Identifier, amount: Policy_Amount}
+
+  ClaimAmount:
+    table: Claim_Amount
+    key_columns: [Claim_Amount_Identifier]
+    columns: {id: Claim_Amount_Identifier, amount: Claim_Amount}
+
+  InsurableObject:
+    table: Insurable_Object
+    key_columns: [Insurable_Object_Identifier]
+    columns: {id: Insurable_Object_Identifier, object_type: Insurable_Object_Type_Code}
+
+  Occurrence:
+    table: Occurrence
+    key_columns: [Occurrence_Identifier]
+    columns:
+      id: Occurrence_Identifier
+      begin_date: Occurrence_Begin_Date
+      end_date: Occurrence_End_Date
+
+  GeographicLocation:
+    table: Geographic_Location
+    key_columns: [Geographic_Location_Identifier]
+    columns:
+      id: Geographic_Location_Identifier
+      location_name: Location_Name
+      location_code: Location_Code
+
+  PolicyHolder:
+    table: Agreement_Party_Role
+    key_columns: [Agreement_Identifier, Party_Identifier]
+    columns: {id: Party_Identifier}
+    predicate: {Party_Role_Code: PH}
+
+  Agent:
+    table: Agreement_Party_Role
+    key_columns: [Agreement_Identifier, Party_Identifier]
+    columns: {id: Party_Identifier}
+    predicate: {Party_Role_Code: AG}
+
+  Underwriter:
+    table: Agreement_Party_Role
+    key_columns: [Agreement_Identifier, Party_Identifier]
+    columns: {id: Party_Identifier}
+    predicate: {Party_Role_Code: UW}
+
+edges:
+  HOLDS:
+    via_table: Agreement_Party_Role
+    from_join: {Party_Identifier: Party_Identifier}
+    to_join: {Agreement_Identifier: Policy_Identifier}
+    predicate: {Party_Role_Code: PH}
+
+  SOLD:
+    via_table: Agreement_Party_Role
+    from_join: {Party_Identifier: Party_Identifier}
+    to_join: {Agreement_Identifier: Policy_Identifier}
+    predicate: {Party_Role_Code: AG}
+
+  UNDERWROTE:
+    via_table: Agreement_Party_Role
+    from_join: {Party_Identifier: Party_Identifier}
+    to_join: {Agreement_Identifier: Policy_Identifier}
+    predicate: {Party_Role_Code: UW}
+
+  COVERED_BY:
+    join: {Policy_Identifier: Policy_Identifier}
+
+  PRICED_BY:
+    join: {Effective_Date: Effective_Date, Policy_Coverage_Detail_Identifier: Policy_Coverage_Detail_Identifier}
+
+  PRICED_PREMIUM:
+    join: {Effective_Date: Effective_Date, Policy_Coverage_Detail_Identifier: Policy_Coverage_Detail_Identifier}
+    restrict: {table: Premium, columns: {Policy_Amount_Identifier: Policy_Amount_Identifier}}
+
+  HAS_POLICY_AMOUNT:
+    join: {Policy_Identifier: Policy_Identifier}
+
+  HAS_PREMIUM:
+    join: {Policy_Identifier: Policy_Identifier}
+    restrict: {table: Premium, columns: {Policy_Amount_Identifier: Policy_Amount_Identifier}}
+
+  CLAIMED_AGAINST:
+    via_table: Claim_Coverage
+    from_join: {Claim_Identifier: Claim_Identifier}
+    to_join: {Effective_Date: Effective_Date, Policy_Coverage_Detail_Identifier: Policy_Coverage_Detail_Identifier}
+
+  DUE_TO:
+    join: {Catastrophe_Identifier: Catastrophe_Identifier}
+
+  HAS_AMOUNT:
+    join: {Claim_Identifier: Claim_Identifier}
+
+  HAS_LOSS_PAYMENT:
+    join: {Claim_Identifier: Claim_Identifier}
+    restrict: {table: Loss_Payment, columns: {Claim_Amount_Identifier: Claim_Amount_Identifier}}
+
+  HAS_LOSS_RESERVE:
+    join: {Claim_Identifier: Claim_Identifier}
+    restrict: {table: Loss_Reserve, columns: {Claim_Amount_Identifier: Claim_Amount_Identifier}}
+
+  HAS_EXPENSE_PAYMENT:
+    join: {Claim_Identifier: Claim_Identifier}
+    restrict: {table: Expense_Payment, columns: {Claim_Amount_Identifier: Claim_Amount_Identifier}}
+
+  HAS_EXPENSE_RESERVE:
+    join: {Claim_Identifier: Claim_Identifier}
+    restrict: {table: Expense_Reserve, columns: {Claim_Amount_Identifier: Claim_Amount_Identifier}}
+
+  COVERS:
+    join: {Insurable_Object_Identifier: Insurable_Object_Identifier}
+
+  INVOLVES:
+    join: {Insurable_Object_Identifier: Insurable_Object_Identifier}
+
+  ARISES_FROM:
+    join: {Occurrence_Identifier: Occurrence_Identifier}
+
+  LOCATED_AT:
+    join: {Geographic_Location_Identifier: Geographic_Location_Identifier}
+
+  POLICY_LOCATED_AT:
+    join: {Geographic_Location_Identifier: Geographic_Location_Identifier}
+
+  HOLDS_R:
+    join: {Agreement_Identifier: Policy_Identifier}
+
+  SOLD_R:
+    join: {Agreement_Identifier: Policy_Identifier}
+
+  UNDERWROTE_R:
+    join: {Agreement_Identifier: Policy_Identifier}
+
+  IS_PARTY_PH:
+    join: {Party_Identifier: Party_Identifier}
+
+  IS_PARTY_AG:
+    join: {Party_Identifier: Party_Identifier}
+
+  IS_PARTY_UW:
+    join: {Party_Identifier: Party_Identifier}

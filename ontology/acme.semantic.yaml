@@ -1,0 +1,673 @@
+version: 1
+domain: acme_insurance
+
+value_types:
+  Money: {type: numeric}
+  Identifier: {type: string}
+  Date: {type: date}
+
+concepts:
+  Party:
+    key: [id]
+    display: id
+    description: A person or organization known to the insurer.
+    attributes:
+      id:
+        type: string
+        value_type: Identifier
+        label: party id
+        aliases: [party identifier, internal party id]
+      party_name:
+        type: string
+        label: party name
+        aliases: [person name, organization name]
+    searchable: [party_name]
+
+  Policy:
+    key: [id]
+    display: policy_number
+    description: An insurance agreement, whose id doubles as the agreement id.
+    searchable: [policy_number]
+    attributes:
+      id:
+        type: string
+        value_type: Identifier
+        label: policy id
+        aliases: [policy identifier, internal policy id, agreement id, agreement identifier]
+      policy_number:
+        type: string
+        value_type: Identifier
+        label: policy number
+        aliases: [policy no]
+      effective_date:
+        type: date
+        value_type: Date
+        label: policy effective date
+        aliases: [policy inception date, policy start date]
+      expiration_date:
+        type: date
+        value_type: Date
+        label: policy expiration date
+        aliases: [policy expiry date, policy end date]
+
+  Claim:
+    key: [id]
+    display: company_claim_number
+    description: >
+      A claim made under a policy, opened and later closed; loss and expense
+      payments and reserves attach to a claim, so a total of those amounts is a
+      quantity per claim.
+    attributes:
+      id:
+        type: string
+        value_type: Identifier
+        label: claim id
+        aliases: [claim identifier, internal claim id]
+      company_claim_number:
+        type: string
+        value_type: Identifier
+        label: claim number
+        aliases: [company claim number]
+      claim_open_date:
+        type: date
+        value_type: Date
+        label: claim open date
+        aliases: [claim opened date]
+      claim_close_date:
+        type: date
+        value_type: Date
+        label: claim close date
+        aliases: [claim closed date]
+
+  Catastrophe:
+    key: [id]
+    display: catastrophe_name
+    description: >
+      A named catastrophe that claims may be attributed to, reached from a claim
+      and normally identified by its name rather than its id.
+    attributes:
+      id:
+        type: string
+        value_type: Identifier
+        label: catastrophe id
+        aliases: [catastrophe identifier, internal catastrophe id]
+      catastrophe_name:
+        type: string
+        label: catastrophe name
+        aliases: [disaster name]
+    searchable: [catastrophe_name]
+
+  PolicyCoverageDetail:
+    key: [effective_date, id]
+    display: id
+    description: >
+      One coverage on a policy, effective between two dates and covering an
+      insured asset; premium is an amount per coverage detail, so a premium
+      total is a quantity per detail.
+    attributes:
+      id:
+        type: string
+        value_type: Identifier
+        label: coverage detail id
+        aliases: [policy coverage detail id, policy coverage detail identifier, internal coverage detail id]
+      effective_date:
+        type: date
+        value_type: Date
+        label: coverage effective date
+        aliases: [policy coverage detail effective date, coverage start date]
+      expiration_date:
+        type: date
+        value_type: Date
+        label: coverage expiration date
+        aliases: [policy coverage detail expiration date, coverage end date]
+
+  PolicyAmount:
+    key: [id]
+    display: id
+    grain: one row per amount per coverage detail; 12 rows over 6 details
+    description: >
+      An amount recorded on a policy, whose KIND -- a premium, or a coverage
+      limit -- is carried by the edge used to reach it rather than by a separate
+      concept, so a premium total must be reached by a premium edge.
+    attributes:
+      id:
+        type: string
+        value_type: Identifier
+        label: policy amount id
+        aliases: [policy amount identifier, internal policy amount id]
+      amount:
+        type: numeric
+        value_type: Money
+        label: policy amount
+
+  ClaimAmount:
+    key: [id]
+    display: id
+    grain: one row per amount EVENT; several amounts of several kinds per claim
+    description: >
+      An amount on a claim, whose KIND -- loss payment, loss reserve, expense
+      payment, expense reserve -- is carried by the edge used to reach it rather
+      than by a separate concept.
+    attributes:
+      id:
+        type: string
+        value_type: Identifier
+        label: claim amount id
+        aliases: [claim amount identifier, internal claim amount id]
+      amount:
+        type: numeric
+        value_type: Money
+        label: claim amount
+
+  InsurableObject:
+    key: [id]
+    display: id
+    description: The insured asset -- a building, vehicle or other object of insurance.
+    attributes:
+      id:
+        type: string
+        value_type: Identifier
+        label: insurable object id
+        aliases: [insurable object identifier, internal insurable object id, asset id, insured object id]
+      object_type:
+        type: string
+        label: object type
+        aliases: [insurable object type, insured object type, asset type, object type code]
+
+  Occurrence:
+    key: [id]
+    display: id
+    description: The loss event a claim arises from.
+    attributes:
+      id:
+        type: string
+        value_type: Identifier
+        label: occurrence id
+        aliases: [occurrence identifier, internal occurrence id, loss event id]
+      begin_date:
+        type: date
+        value_type: Date
+        label: occurrence begin date
+        aliases: [begin date, loss event begin date, occurrence start date]
+      end_date:
+        type: date
+        value_type: Date
+        label: occurrence end date
+        aliases: [end date, loss event end date]
+
+  GeographicLocation:
+    key: [id]
+    display: id
+    description: A place; hierarchical via its parent location.
+    attributes:
+      id:
+        type: string
+        value_type: Identifier
+        label: geographic location id
+        aliases: [location id, geographic location identifier, internal location id]
+      location_name:
+        type: string
+        label: location name
+        aliases: [geographic location name, place name]
+      location_code:
+        type: string
+        label: location code
+        aliases: [geographic location code]
+
+  PolicyHolder:
+    implements: Party
+    role: PH
+    key: [id]
+    display: id
+    grain: one row per (agreement, party) pairing in the PH role
+    description: >
+      A party in the policy-holder role -- select this concept for policy-holder
+      questions rather than Party with a role filter, because the role is part
+      of this concept's identity and needs no separate declaration.
+    attributes:
+      id:
+        type: string
+        value_type: Identifier
+        label: policy holder id
+        aliases: [policyholder id, holder id, policy holder party id]
+      name:
+        via: IS_PARTY_PH
+        attribute: party_name
+        type: string
+        label: policy holder name
+        aliases: [policyholder name, holder name]
+
+  Agent:
+    implements: Party
+    role: AG
+    key: [id]
+    display: id
+    grain: one row per (agreement, party) pairing in the AG role
+    description: >
+      A party in the agent role, the seller of a policy -- select this concept
+      for agent questions rather than Party with a role filter, because the role
+      is part of this concept's identity and needs no separate declaration.
+    attributes:
+      id:
+        type: string
+        value_type: Identifier
+        label: agent id
+        aliases: [agent party id]
+      name:
+        via: IS_PARTY_AG
+        attribute: party_name
+        type: string
+        label: agent name
+
+  Underwriter:
+    implements: Party
+    role: UW
+    key: [id]
+    display: id
+    grain: one row per (agreement, party) pairing in the UW role
+    description: >
+      A party in the underwriter role, who underwrote a policy -- select this
+      concept for underwriter questions rather than Party with a role filter,
+      because the role is part of this concept's identity and needs no separate
+      declaration.
+    attributes:
+      id:
+        type: string
+        value_type: Identifier
+        label: underwriter id
+        aliases: [underwriter party id]
+      name:
+        via: IS_PARTY_UW
+        attribute: party_name
+        type: string
+        label: underwriter name
+
+party_roles:
+  PH: {name: PolicyHolder, description: The party who holds the policy.}
+  AG: {name: Agent,        description: The party who sold the policy.}
+  UW: {name: Underwriter,  description: The party who underwrote the policy.}
+
+edges:
+  HOLDS:
+    from: Party
+    to: Policy
+    role: PH
+    cardinality: many_to_many
+    fan_out: bounded
+    fan_out_reverse: bounded
+    evidence: "junction rows per party are small; PK(Agreement,Party,Role,Date)"
+    description: Party holds Policy.
+
+  SOLD:
+    from: Party
+    to: Policy
+    role: AG
+    cardinality: many_to_many
+    fan_out: bounded
+    fan_out_reverse: bounded
+    evidence: "same junction"
+    description: Party (as agent) sold Policy.
+
+  UNDERWROTE:
+    from: Party
+    to: Policy
+    role: UW
+    cardinality: many_to_many
+    fan_out: bounded
+    fan_out_reverse: bounded
+    evidence: "same junction"
+    description: Party (as underwriter) underwrote Policy.
+
+  COVERED_BY:
+    from: Policy
+    to: PolicyCoverageDetail
+    cardinality: one_to_many
+    fan_out: bounded
+    fan_out_reverse: none
+    evidence: "coverage details per policy: 6 rows / 2 policies"
+
+  PRICED_BY:
+    from: PolicyCoverageDetail
+    to: PolicyAmount
+    cardinality: one_to_many
+    fan_out: bounded
+    fan_out_reverse: none
+    evidence: "amounts per coverage detail: 12/6"
+    description: Any amount on a coverage, of any kind.
+
+  PRICED_PREMIUM:
+    from: PolicyCoverageDetail
+    to: PolicyAmount
+    cardinality: one_to_many
+    fan_out: bounded
+    fan_out_reverse: none
+    evidence: "premium subset: 6/6 details"
+    description: The premium amount. Use this for premiums, not PRICED_BY.
+
+  HAS_POLICY_AMOUNT:
+    from: Policy
+    to: PolicyAmount
+    cardinality: one_to_many
+    fan_out: bounded
+    fan_out_reverse: none
+    evidence: "FK Policy_Amount.Policy_Identifier -> Policy; amounts per policy 10 and 2 (12/2), one amount names one policy"
+    description: Any amount recorded on a policy, of any kind -- including one
+      with no coverage detail, which COVERED_BY + PRICED_BY cannot reach.
+
+  HAS_PREMIUM:
+    from: Policy
+    to: PolicyAmount
+    cardinality: one_to_many
+    fan_out: bounded
+    fan_out_reverse: none
+    evidence: "premium subset of the same FK: 6 of 12 amounts, 5 and 1 per policy"
+    description: The premium amounts of a policy, reached directly. Use this for
+      premiums, not HAS_POLICY_AMOUNT, which also holds coverage limits.
+
+  CLAIMED_AGAINST:
+    from: Claim
+    to: PolicyCoverageDetail
+    cardinality: many_to_many
+    fan_out: bounded
+    fan_out_reverse: bounded
+    evidence: "claim_coverage junction: 2 rows"
+
+  DUE_TO:
+    from: Claim
+    to: Catastrophe
+    cardinality: many_to_one
+    fan_out: none
+    fan_out_reverse: multiplicative
+    evidence: "many_to_one to catastrophe adds no rows"
+
+  HAS_AMOUNT:
+    from: Claim
+    to: ClaimAmount
+    cardinality: one_to_many
+    fan_out: multiplicative
+    fan_out_reverse: none
+    evidence: "amounts per claim unbounded: 8/2 claims, grows with claim life"
+    description: Any amount on a claim, of any kind.
+
+  HAS_LOSS_PAYMENT:
+    from: Claim
+    to: ClaimAmount
+    cardinality: one_to_many
+    fan_out: bounded
+    fan_out_reverse: none
+    evidence: "kind-restricted: at most the kind rows per claim"
+    description: The loss payment amount of a claim.
+
+  HAS_LOSS_RESERVE:
+    from: Claim
+    to: ClaimAmount
+    cardinality: one_to_many
+    fan_out: bounded
+    fan_out_reverse: none
+    evidence: "kind-restricted"
+    description: The loss reserve amount of a claim.
+
+  HAS_EXPENSE_PAYMENT:
+    from: Claim
+    to: ClaimAmount
+    cardinality: one_to_many
+    fan_out: bounded
+    fan_out_reverse: none
+    evidence: "kind-restricted"
+    description: The expense payment amount of a claim.
+
+  HAS_EXPENSE_RESERVE:
+    from: Claim
+    to: ClaimAmount
+    cardinality: one_to_many
+    fan_out: bounded
+    fan_out_reverse: none
+    evidence: "kind-restricted"
+    description: The expense reserve amount of a claim.
+
+  COVERS:
+    from: PolicyCoverageDetail
+    to: InsurableObject
+    cardinality: many_to_one
+    fan_out: none
+    fan_out_reverse: bounded
+    evidence: "FK Policy_Coverage_Detail.Insurable_Object_Identifier"
+    description: The coverage detail covers this insured asset.
+
+  INVOLVES:
+    from: Claim
+    to: InsurableObject
+    cardinality: many_to_one
+    fan_out: none
+    fan_out_reverse: bounded
+    evidence: "FK Claim.Insurable_Object_Identifier -- distinct from COVERS"
+    description: The asset involved in the claim. NOT the same relationship as
+      COVERS -- a claim can involve an asset another detail covers.
+
+  ARISES_FROM:
+    from: Claim
+    to: Occurrence
+    cardinality: many_to_one
+    fan_out: none
+    fan_out_reverse: bounded
+    evidence: "FK Claim.Occurrence_Identifier"
+    description: The loss event this claim arises from.
+
+  LOCATED_AT:
+    from: InsurableObject
+    to: GeographicLocation
+    cardinality: many_to_one
+    fan_out: none
+    fan_out_reverse: bounded
+    evidence: "FK Insurable_Object.Geographic_Location_Identifier"
+    description: Where the insured asset is located.
+
+  POLICY_LOCATED_AT:
+    from: Policy
+    to: GeographicLocation
+    cardinality: many_to_one
+    fan_out: none
+    fan_out_reverse: bounded
+    evidence: "FK Policy.Geographic_Location_Identifier"
+    description: The policy's registered location.
+
+  HOLDS_R:
+    from: PolicyHolder
+    to: Policy
+    cardinality: many_to_one
+    fan_out: none
+    fan_out_reverse: bounded
+    evidence: "each junction row names one agreement; holder rows per policy small -- same junction evidence as HOLDS, PK(Agreement,Party,Role,Date)"
+    description: The policy this policy-holder holds.
+
+  SOLD_R:
+    from: Agent
+    to: Policy
+    cardinality: many_to_one
+    fan_out: none
+    fan_out_reverse: none
+    evidence: "one agent of record per policy -- a domain invariant; the junction permits several and the data holds one"
+    description: The policy this agent sold.
+
+  UNDERWROTE_R:
+    from: Underwriter
+    to: Policy
+    cardinality: many_to_one
+    fan_out: none
+    fan_out_reverse: bounded
+    evidence: "each junction row names one agreement; underwriter rows per policy small -- same junction evidence as UNDERWROTE"
+    description: The policy this underwriter underwrote.
+
+  IS_PARTY_PH:
+    from: PolicyHolder
+    to: Party
+    cardinality: many_to_one
+    fan_out: none
+    fan_out_reverse: bounded
+    evidence: "junction FK Party_Identifier -> Party; PH rows per party small (2 rows for party 1 in the fixture)"
+    description: The Party this policy-holder is (interface resolution).
+
+  IS_PARTY_AG:
+    from: Agent
+    to: Party
+    cardinality: many_to_one
+    fan_out: none
+    fan_out_reverse: bounded
+    evidence: "junction FK Party_Identifier -> Party; AG rows per party small"
+    description: The Party this agent is (interface resolution).
+
+  IS_PARTY_UW:
+    from: Underwriter
+    to: Party
+    cardinality: many_to_one
+    fan_out: none
+    fan_out_reverse: bounded
+    evidence: "junction FK Party_Identifier -> Party; UW rows per party small"
+    description: The Party this underwriter is (interface resolution).
+
+metrics:
+  LossPayment:
+    op: sum
+    operand: {concept: ClaimAmount, attribute: amount, via: HAS_LOSS_PAYMENT}
+    description: Total loss payments.
+
+  LossReserve:
+    op: sum
+    operand: {concept: ClaimAmount, attribute: amount, via: HAS_LOSS_RESERVE}
+    description: Total loss reserves.
+
+  ExpensePayment:
+    op: sum
+    operand: {concept: ClaimAmount, attribute: amount, via: HAS_EXPENSE_PAYMENT}
+    description: Total expense payments.
+
+  ExpenseReserve:
+    op: sum
+    operand: {concept: ClaimAmount, attribute: amount, via: HAS_EXPENSE_RESERVE}
+    description: Total expense reserves.
+
+  TotalLoss:
+    combine: add
+    per: Claim
+    components: [LossPayment, LossReserve, ExpensePayment, ExpenseReserve]
+    description: >
+      Total incurred loss: loss payment + loss reserve + expense payment +
+      expense reserve. The four kinds are distinct amount rows reached by
+      distinct edges; adding them is the ONLY governed composition. It is formed
+      per claim, so an aggregate over it averages claims rather than combining
+      four separate totals.
+
+  PremiumAmount:
+    op: sum
+    operand: {concept: PolicyAmount, attribute: amount, via: PRICED_PREMIUM}
+    description: Premium amounts only -- reached through PRICED_PREMIUM, never
+      PRICED_BY, which would include coverage limits.
+
+  PolicyCount:
+    op: count_distinct
+    operand: {concept: Policy, attribute: id}
+    description: Number of distinct policies.
+
+  ClaimCount:
+    op: count_distinct
+    operand: {concept: Claim, attribute: id}
+    description: Number of distinct claims.
+
+  LossRatio:
+    combine: divide
+    components: [TotalLoss, PremiumAmount]
+    description: >
+      Total incurred loss divided by premium. A ratio is a metric over metrics,
+      so the denominator follows the plan's SUBJECT -- the premium of whatever
+      exposure the numerator's losses are measured over. Numerator and
+      denominator must cover the same exposure; that invariant is the whole
+      content of the term.
+
+links:
+  - name: PolicyHolderOf
+    predicate: HOLDS
+    from: Party
+    to: Policy
+    backed_by: [HOLDS]
+    description: The party who holds the policy.
+
+  - name: AgentOf
+    predicate: SOLD
+    from: Party
+    to: Policy
+    backed_by: [SOLD]
+    description: The party who sold the policy.
+
+  - name: UnderwriterOf
+    predicate: UNDERWROTE
+    from: Party
+    to: Policy
+    backed_by: [UNDERWROTE]
+    description: The party who underwrote the policy.
+
+  - name: PolicyHasClaim
+    predicate: HAS_CLAIM
+    from: Policy
+    to: Claim
+    backed_by: [COVERED_BY, CLAIMED_AGAINST]   # multi-hop route behind one business link
+    description: Claims made against the policy's coverage.
+
+  - name: ClaimCausedBy
+    predicate: DUE_TO
+    from: Claim
+    to: Catastrophe
+    backed_by: [DUE_TO]
+    description: The catastrophe that caused the claim.
+
+  - name: PolicyCoversAsset
+    predicate: COVERS
+    from: Policy
+    to: InsurableObject
+    backed_by: [COVERED_BY, COVERS]
+    description: The assets a policy covers, through its coverage details.
+
+  - name: ClaimInvolvesAsset
+    predicate: INVOLVES
+    from: Claim
+    to: InsurableObject
+    backed_by: [INVOLVES]
+    description: The asset involved in a claim. Distinct from coverage.
+
+  - name: ClaimArisesFromEvent
+    predicate: ARISES_FROM
+    from: Claim
+    to: Occurrence
+    backed_by: [ARISES_FROM]
+    description: The loss event behind a claim.
+
+glossary:
+  - phrases: [total loss, total incurred, incurred loss, loss]
+    means: {metric: TotalLoss}
+  - phrases: [loss ratio]
+    means: {metric: LossRatio}
+  - phrases: [premium, premiums, premium amount, premiums paid]
+    means: {metric: PremiumAmount}
+  - phrases: [loss payment, paid loss, loss payment amount]
+    means: {metric: LossPayment}
+  - phrases: [loss reserve, loss reserve amount]
+    means: {metric: LossReserve}
+  - phrases: [expense payment, expense payment amount]
+    means: {metric: ExpensePayment}
+  - phrases: [expense reserve, expense reserve amount]
+    means: {metric: ExpenseReserve}
+  - phrases: [policy holder, policyholder, holder]
+    means: {link: PolicyHolderOf}
+  - phrases: [agent, sold by]
+    means: {link: AgentOf}
+  - phrases: [underwriter]
+    means: {link: UnderwriterOf}
+  - phrases: [number of policies, policy count]
+    means: {metric: PolicyCount}
+  - phrases: [number of claims, claim count]
+    means: {metric: ClaimCount}
+  - phrases: [catastrophe, disaster]
+    means: {link: ClaimCausedBy}
+  - phrases: [asset, insured object, insured property, insurable object]
+    means: {link: PolicyCoversAsset}
+  - phrases: [occurrence, loss event]
+    means: {link: ClaimArisesFromEvent}

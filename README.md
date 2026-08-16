@@ -1,7 +1,9 @@
-# Semantic Path Compilation Reference Source
+# Semantic Planning and Deterministic Compilation for Text-to-SQL
 
-This directory contains the source-code reference accompanying the paper.
-It is an illustrative snapshot, not a standalone distribution.
+This repository contains an illustrative reference implementation of semantic
+planning and deterministic SQL compilation. The research paper is not included.
+This snapshot is provided for source-code reference and is not a standalone
+distribution.
 
 ## Contents
 
